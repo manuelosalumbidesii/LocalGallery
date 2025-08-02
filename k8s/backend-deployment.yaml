@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: localgallery-backend
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+        - name: uploads-volume
+          mountPath: /app/uploads   # Path sa loob ng container
+      volumes:
+      - name: uploads-volume
+        hostPath:
+          path: /mnt/data/uploads   
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend  
+  ports:
+    - port: 3000
+      targetPort: 3000
+  type: ClusterIP
