@@ -59,6 +59,16 @@ jobs:
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:latest
           docker build -t ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ./frontend
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:latest
+          
+      - name: 🔍 Trivy Scan Backend Image (Local)
+        uses: aquasecurity/trivy-action@0.16.1
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:${{ github.sha }}
+          scan-type: image
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
 
       - name: 🔍 Trivy Scan Backend Image (Local)
         run: |
