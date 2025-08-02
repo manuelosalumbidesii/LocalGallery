@@ -1,4 +1,4 @@
-name: CI/CD - Build and Push
+name: CI/CD - Build, Scan, and Push
 
 on:
   push:
@@ -9,9 +9,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: 🧾 Checkout code
         uses: actions/checkout@v3
 
+   
       - name: 📦 Install backend dependencies
         run: |
           cd backend
@@ -28,7 +30,6 @@ jobs:
           npm install eslint --save-dev
           npx eslint . || echo "Lint warnings found"
 
-   
       - name: 📦 Install frontend dependencies
         run: |
           cd frontend
@@ -45,54 +46,58 @@ jobs:
           npm install eslint --save-dev
           npx eslint . || echo "Lint warnings found"
 
-   
       - name: 🐳 Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: 🐙 Log in to GHCR
         run: echo "${{ secrets.GH_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
-     
       - name: 🏗️ Build Docker images
         run: |
           VERSION=${GITHUB_SHA::7}
-          
+
           # Backend
           docker build -t ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ./backend
+          docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:latest
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:$VERSION
-          
+          docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:latest
+
           # Frontend
           docker build -t ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ./frontend
+          docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:latest
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:$VERSION
+          docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:latest
 
-      - name: 🔍 Install Trivy
+      - name: 🔍 Scan Backend Image
         uses: aquasecurity/trivy-action@0.16.1
         with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:${{ github.sha }}
           scan-type: image
           severity: CRITICAL,HIGH
           exit-code: '1'
           ignore-unfixed: true
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:${{ github.sha }}
-
-      - name: 🔍 Scan Backend Image
-        run: |
-          VERSION=${GITHUB_SHA::7}
-          trivy image --exit-code 1 --severity CRITICAL,HIGH ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION
 
       - name: 🔍 Scan Frontend Image
-        run: |
-          VERSION=${GITHUB_SHA::7}
-          trivy image --exit-code 1 --severity CRITICAL,HIGH ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION
+        uses: aquasecurity/trivy-action@0.16.1
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:${{ github.sha }}
+          scan-type: image
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
 
-    
       - name: 🚀 Push to Docker Hub
         run: |
           VERSION=${GITHUB_SHA::7}
           docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION
+          docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION
+          docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:latest
 
       - name: 🚀 Push to GHCR
         run: |
           VERSION=${GITHUB_SHA::7}
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:$VERSION
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:latest
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:$VERSION
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:latest
