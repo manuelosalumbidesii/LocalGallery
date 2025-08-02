@@ -63,11 +63,13 @@ jobs:
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:latest
 
       - name: 🔍 Install Trivy
-        uses: aquasecurity/trivy-action@0.16.1
-        with:
-          scan-type: config
-          ignore-unfixed: true
-
+        run: |
+          sudo apt-get update
+          sudo apt-get install wget apt-transport-https gnupg lsb-release -y
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy -y
 
       - name: 🔍 Trivy Scan Backend Image
         run: |
@@ -85,6 +87,7 @@ jobs:
           VERSION=${GITHUB_SHA::7}
           docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION
           docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:latest
+
           docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION
           docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:latest
 
@@ -94,5 +97,6 @@ jobs:
           VERSION=${GITHUB_SHA::7}
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:$VERSION
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:latest
+
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:$VERSION
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:latest
