@@ -71,6 +71,9 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
           sudo apt-get update
           sudo apt-get install trivy -y
+ 
+      - name: Trivy ignore
+        run: trivy fs --ignorefile .trivyignore .
 
       - name: 🔍 Trivy Scan Backend Image
         run: |
