@@ -31,4 +31,16 @@ router.get("/images", (req, res) => {
   });
 });
 
+router.delete("/images/:filename", (req, res) => {
+  const filePath = path.join(uploadDir, req.params.filename);
+  if (fs.existsSync(filePath)) {
+    fs.unlink(filePath, (err) => {
+      if (err) return res.status(500).json({ error: "Unable to delete image" });
+      res.json({ message: "Image deleted successfully" });
+    });
+  } else {
+    res.status(404).json({ error: "File not found" });
+  }
+});
+
 module.exports = router;
