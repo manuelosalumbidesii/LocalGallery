@@ -15,7 +15,8 @@ jobs:
       - name: 📦 Install backend dependencies
         run: |
           cd backend
-          npm install
+          npm ci
+
 
       - name: ✅ Run unit tests (backend)
         run: |
