@@ -9,11 +9,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: 🧾 Checkout code
         uses: actions/checkout@v3
 
-   
       - name: 📦 Install backend dependencies
         run: |
           cd backend
@@ -57,34 +55,44 @@ jobs:
           VERSION=${GITHUB_SHA::7}
           docker build -t ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ./backend
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:latest
+          docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:$VERSION
+          docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:latest
           docker build -t ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ./frontend
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:latest
-          
-      - name: 🔍 Trivy Scan Backend Image (Local)
-        uses: aquasecurity/trivy-action@0.16.1
-        with:
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:${{ github.sha }}
-          scan-type: image
-          severity: CRITICAL,HIGH
-          exit-code: '1'
-          ignore-unfixed: true
+          docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:$VERSION
+          docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:latest
 
-
-      - name: 🔍 Trivy Scan Backend Image (Local)
+      - name: 🔍 Install Trivy
         run: |
-           VERSION=${GITHUB_SHA::7}
-           trivy image --exit-code 1 --severity CRITICAL,HIGH ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION
+          sudo apt-get update
+          sudo apt-get install wget -y
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.48.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.48.0_Linux-64bit.deb
 
-      - name: 🔍 Trivy Scan Frontend Image (Local)
+      - name: 🔍 Trivy Scan Backend Image
+        run: |
+          VERSION=${GITHUB_SHA::7}
+          trivy image --exit-code 1 --severity CRITICAL,HIGH ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION
+
+      - name: 🔍 Trivy Scan Frontend Image
         run: |
           VERSION=${GITHUB_SHA::7}
           trivy image --exit-code 1 --severity CRITICAL,HIGH ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION
 
-          - name: 🚀 Push to Docker Hub
-            if: success()
-            run: |
-              VERSION=${GITHUB_SHA::7}
-              docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION
-              docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:latest
-              docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION
-              docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:latest
+      - name: 🚀 Push to Docker Hub
+        if: success()
+        run: |
+          VERSION=${GITHUB_SHA::7}
+          docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION
+          docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION
+          docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:latest
+
+      - name: 🚀 Push to GHCR
+        if: success()
+        run: |
+          VERSION=${GITHUB_SHA::7}
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:$VERSION
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:latest
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:$VERSION
+          docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:latest
