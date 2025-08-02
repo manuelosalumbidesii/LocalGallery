@@ -63,11 +63,11 @@ jobs:
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:latest
 
       - name: 🔍 Install Trivy
-        run: |
-          sudo apt-get update
-          sudo apt-get install wget -y
-          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.48.0_Linux-64bit.deb
-          sudo dpkg -i trivy_0.48.0_Linux-64bit.deb
+        uses: aquasecurity/trivy-action@0.16.1
+        with:
+          scan-type: config
+          ignore-unfixed: true
+
 
       - name: 🔍 Trivy Scan Backend Image
         run: |
