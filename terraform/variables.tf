@@ -1,16 +1,16 @@
 variable "project_name" {
   type    = string
-  default = "free-tier"
+  default = "Free-Tier-VPC-Practice"
 }
 
 variable "aws_region" {
   type    = string
-  default = "us-east-1"
+  default = "ap-southeast-2"
 }
 
 variable "aws_az" {
   type    = string
-  default = "us-east-1a"
+  default = "ap-southeast-2a"
 }
 
 variable "vpc_cidr" {
