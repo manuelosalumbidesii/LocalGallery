@@ -102,7 +102,7 @@ jobs:
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:$VERSION
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:latest
 
-      # Terraform Deployment -
+      # Terraform Deployment
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
