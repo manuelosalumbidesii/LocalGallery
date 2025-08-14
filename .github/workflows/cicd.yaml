@@ -1,4 +1,4 @@
-name: CI/CD - Build, Scan, and Push
+name: CI/CD - Build, Scan, Push, Terraform
 
 on:
   push:
@@ -8,15 +8,19 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write 
+      contents: read       
+
     steps:
       - name: 🧾 Checkout code
         uses: actions/checkout@v3
 
+    
       - name: 📦 Install backend dependencies
         run: |
           cd backend
           npm ci
-
 
       - name: ✅ Run unit tests (backend)
         run: |
@@ -45,6 +49,7 @@ jobs:
           npm install eslint --save-dev
           npx eslint . || echo "Lint warnings found"
 
+     
       - name: 🐳 Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
@@ -58,6 +63,7 @@ jobs:
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:latest
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:$VERSION
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:latest
+
           docker build -t ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ./frontend
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:latest
           docker tag ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:$VERSION
@@ -71,9 +77,6 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
           sudo apt-get update
           sudo apt-get install trivy -y
- 
-      - name: Trivy ignore
-        run: trivy fs --ignorefile .trivyignore .
 
       - name: 🔍 Trivy Scan Backend Image
         run: |
@@ -85,22 +88,31 @@ jobs:
           VERSION=${GITHUB_SHA::7}
           trivy image --exit-code 1 --severity CRITICAL,HIGH ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION
 
-      - name: 🚀 Push to Docker Hub
+      - name: 🚀 Push Docker Images
         if: success()
         run: |
           VERSION=${GITHUB_SHA::7}
           docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:$VERSION
           docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-backend:latest
-
           docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:$VERSION
           docker push ${{ secrets.DOCKER_USERNAME }}/localgallery-frontend:latest
 
-      - name: 🚀 Push to GHCR
-        if: success()
-        run: |
-          VERSION=${GITHUB_SHA::7}
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:$VERSION
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-backend:latest
-
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:$VERSION
           docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/localgallery-frontend:latest
+
+      # Terraform Deployment -
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::545209303902:role/GitHubActions-Terraform-Role
+          aws-region: us-east-1
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
